@@ -306,7 +306,7 @@ function resultBadgeClass(record) {
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+/*@import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');*/
 
 /* ===================== Design tokens ===================== */
 :global(html[data-theme='dark']) {
