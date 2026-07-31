@@ -133,6 +133,7 @@ function resultBadgeClass(record) {
         <Link href="/fgchecker" class="nav-link is-active">Home</Link>
         <Link href="/scan" class="nav-link">Scan</Link>
         <Link href="/print" class="nav-link">Print Sticker</Link>
+        <Link href="/admin" class="nav-link">Admin</Link>
       </nav>
 
       <button class="switch" role="switch" :aria-checked="theme === 'dark'" @click="toggleTheme" title="Toggle light / dark">
@@ -196,7 +197,7 @@ function resultBadgeClass(record) {
               <input
                 type="text"
                 v-model="filters.modelName"
-                placeholder="e.g. ABC-123"
+                placeholder="e.g. ABC-0123G"
                 @keyup.enter="loadRecords"
               />
             </label>
@@ -205,7 +206,7 @@ function resultBadgeClass(record) {
               <input
                 type="text"
                 v-model="filters.lotNo"
-                placeholder="e.g. L-0456"
+                placeholder="e.g. 0001-01-X"
                 @keyup.enter="loadRecords"
               />
             </label>
@@ -306,7 +307,6 @@ function resultBadgeClass(record) {
 </template>
 
 <style scoped>
-/*@import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');*/
 
 /* ===================== Design tokens ===================== */
 :global(html[data-theme='dark']) {
