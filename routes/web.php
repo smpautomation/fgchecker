@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\FGCheckerRecordController;
+use App\Http\Controllers\FgCheckerScanController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -23,3 +24,8 @@ Route::get('/admin', function () {
 Route::get('/records', [FGCheckerRecordController::class, 'index'])->name('records');
 
 Route::get('/export', [FGCheckerRecordController::class, 'export'])->name('export');
+
+Route::get('/processes', [FgCheckerScanController::class, 'processes'])->name('processes');
+
+Route::post('/scan', [FGCheckerScanController::class, 'store'])->name('scan.store');
+

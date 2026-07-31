@@ -64,16 +64,32 @@ const cameraTarget = ref('operator') // 'operator' | 'lot'
 const videoEl = ref(null)
 let scannerInstance = null
 
+const cameras = ref([]) // [{ id, label }]
+const activeCameraId = ref(null)
+const hasMultipleCameras = computed(() => cameras.value.length > 1)
+
+function pickDefaultCamera(list) {
+  const back = list.find(c => /back|rear|environment/i.test(c.label))
+  return (back || list[0])?.id ?? null
+}
+
 async function openCamera(target) {
   scanError.value = ''
   cameraTarget.value = target
   showCamera.value = true
   await nextTick()
   try {
+    // listCameras(true) requests permission and resolves real labels; safe to
+    // call every time — cheap once permission has already been granted.
+    if (!cameras.value.length) {
+      cameras.value = await QrScanner.listCameras(true)
+      activeCameraId.value = pickDefaultCamera(cameras.value)
+    }
+
     scannerInstance = new QrScanner(videoEl.value, (result) => handleDecode(result.data), {
       highlightScanRegion: true,
       highlightCodeOutline: true,
-      preferredCamera: 'environment',
+      preferredCamera: activeCameraId.value || 'environment',
     })
     await scannerInstance.start()
   } catch (e) {
@@ -81,6 +97,27 @@ async function openCamera(target) {
     showCamera.value = false
   }
 }
+
+async function switchCamera() {
+  if (!scannerInstance || cameras.value.length < 2) return
+  const currentIndex = cameras.value.findIndex(c => c.id === activeCameraId.value)
+  const next = cameras.value[(currentIndex + 1) % cameras.value.length]
+  try {
+    await scannerInstance.setCamera(next.id)
+    activeCameraId.value = next.id
+  } catch (e) {
+    scanError.value = "Couldn't switch cameras on this device."
+  }
+}
+
+/** Best-effort friendly label for the current camera (falls back to its raw label). */
+const activeCameraLabel = computed(() => {
+  const match = cameras.value.find(c => c.id === activeCameraId.value)
+  if (!match) return null
+  if (/front|user/i.test(match.label)) return 'Front camera'
+  if (/back|rear|environment/i.test(match.label)) return 'Back camera'
+  return match.label
+})
 
 function closeCamera() {
   showCamera.value = false
@@ -225,10 +262,9 @@ async function confirmSelection() {
       </div>
 
       <nav class="nav" aria-label="Main">
-        <Link href="/" class="nav-link">Home</Link>
+        <Link href="" class="nav-link">Home</Link>
         <Link href="/scan" class="nav-link is-active">Scan</Link>
         <Link href="/print" class="nav-link">Print Sticker</Link>
-        <Link href="/admin" class="nav-link">Admin</Link>
       </nav>
 
       <button class="switch" role="switch" :aria-checked="theme === 'dark'" @click="toggleTheme" title="Toggle light / dark">
@@ -304,11 +340,28 @@ async function confirmSelection() {
     <Teleport to="body">
       <div v-if="showCamera" class="modal-overlay" @click.self="closeCamera">
         <div class="modal camera-modal">
-          <h3>{{ cameraTarget === 'operator' ? 'Scan Operator QR Code' : 'Scan Lot Traveler QR Code' }}</h3>
+          <div class="camera-modal-head">
+            <h3>{{ cameraTarget === 'operator' ? 'Scan Operator QR Code' : 'Scan Lot Traveler QR Code' }}</h3>
+            <button
+              v-if="hasMultipleCameras"
+              class="camera-flip-btn"
+              @click="switchCamera"
+              title="Switch camera"
+              aria-label="Switch camera"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                <path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+              </svg>
+            </button>
+          </div>
           <div class="camera-frame">
             <video ref="videoEl" playsinline muted></video>
           </div>
-          <p class="camera-hint">Hold the QR code steady inside the frame.</p>
+          <p class="camera-hint">
+            Hold the QR code steady inside the frame.
+            <span v-if="activeCameraLabel" class="camera-current"> &middot; {{ activeCameraLabel }}</span>
+          </p>
           <button class="btn btn-ghost btn-block" @click="closeCamera">Cancel</button>
         </div>
       </div>
@@ -341,6 +394,7 @@ async function confirmSelection() {
 </template>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 /* ===================== Design tokens (match FGChecker.vue) ===================== */
 :global(html[data-theme='dark']) {
@@ -579,6 +633,29 @@ async function confirmSelection() {
   background: #000;
   aspect-ratio: 1 / 1;
 }
+.camera-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  position: relative;
+}
+.camera-modal-head h3 { margin: 0; }
+.camera-flip-btn {
+  position: absolute;
+  right: 0;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.camera-flip-btn:hover { border-color: var(--accent); color: var(--accent); }
+.camera-flip-btn svg { width: 18px; height: 18px; }
+.camera-current { color: var(--text-dim); }
 .camera-frame video { width: 100%; height: 100%; object-fit: cover; }
 .camera-hint { text-align: center; color: var(--text-dim); margin: 14px 0 0; font-size: 0.9rem; }
 
