@@ -31,4 +31,3 @@ class FGCheckerTableService
         return $table;
     }
 }
-

@@ -25,7 +25,7 @@ Route::get('/records', [FGCheckerRecordController::class, 'index'])->name('recor
 
 Route::get('/export', [FGCheckerRecordController::class, 'export'])->name('export');
 
-Route::get('/processes', [FgCheckerScanController::class, 'processes'])->name('processes');
+Route::get('/processes', [FGCheckerScanController::class, 'processes'])->name('processes');
 
 Route::post('/scan', [FGCheckerScanController::class, 'store'])->name('scan.store');
 

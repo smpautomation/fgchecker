@@ -6,6 +6,7 @@ use App\Services\FgCheckerTableService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Carbon;
 
 class FgCheckerScanController extends Controller
 {
@@ -53,7 +54,7 @@ class FgCheckerScanController extends Controller
 
         DB::table($table)->insert([
             'Shift_Date_Time' => $now,
-            'Shift_Date'      => $this->shiftDate($now),
+            'Shift_Date'      => $this->shiftDate(Carbon::now()),
             'Area'            => $area,
             'Result'          => $validated['result'],
             'Model_Name'      => $validated['model_name'],
