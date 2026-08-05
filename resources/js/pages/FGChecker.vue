@@ -13,14 +13,17 @@ function applyTheme(t) {
     document.documentElement.setAttribute('data-theme', t)
     localStorage.setItem('fgchecker-theme', t)
 }
+
 function toggleTheme() {
     theme.value = theme.value === 'dark' ? 'light' : 'dark'
     applyTheme(theme.value)
 }
+
 onMounted(() => {
     const saved = localStorage.getItem('fgchecker-theme')
     theme.value = saved || 'dark'
     applyTheme(theme.value)
+    getOrCreateTabletId()
 })
 
 const showTable = ref(false)
@@ -95,6 +98,32 @@ function resultBadgeClass(record) {
     if (type === 'RELOAD') return 'badge-reload'
     return 'badge-notgood'
 }
+
+function generateUUID() {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+function getOrCreateTabletId() {
+    let tabletId = localStorage.getItem('tablet_id');
+
+    if (!tabletId) {
+      tabletId = 'TABLET-' + generateUUID();
+      localStorage.setItem('tablet_id', tabletId);
+    }
+
+    return tabletId;
+}
+
+const tabletId = getOrCreateTabletId();
+console.log("Tablet ID:", tabletId);
 </script>
 
 <template>
@@ -135,6 +164,12 @@ function resultBadgeClass(record) {
                 <div class="hero-actions">
                     <Link href="/scan" class="btn btn-primary">Start Scanning</Link>
                     <Link href="/print" class="btn btn-ghost">Print a Sticker</Link>
+                </div>
+                <div class="mt-10">
+                    <p class="eyebrow2">Tablet ID: {{ tabletId }}</p>
+                    <p class="hero-sub2">
+                    Do not clear browser cache unless necessary.
+                    </p>
                 </div>
             </div>
 
@@ -448,6 +483,14 @@ code {
     font-weight: 600;
     margin: 0 0 14px;
 }
+.eyebrow2 {
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 0.6rem;
+    color: var(--accent);
+    font-weight: 600;
+    margin: 0 0 14px;
+}
 .hero-title {
     font-family: 'Big Shoulders Display', sans-serif;
     font-weight: 800;
@@ -459,6 +502,14 @@ code {
 }
 .hero-sub {
     font-size: 1.1rem;
+    color: var(--text-dim);
+    max-width: 52ch;
+    line-height: 1.55;
+    margin: 0 0 32px;
+    animation: rise .6s .1s ease both;
+}
+.hero-sub2 {
+    font-size: 0.7rem;
     color: var(--text-dim);
     max-width: 52ch;
     line-height: 1.55;
