@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Controllers\FGCheckerRecordController;
-use App\Http\Controllers\FgCheckerScanController;
+use App\Http\Controllers\FGCheckerScanController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
