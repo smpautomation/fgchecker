@@ -148,15 +148,20 @@ function parseLotQr(text) {
 
 const processes = ref([])
 const loadingProcesses = ref(true)
+const processesError = ref('')
 const counts = reactive({})
 
 async function loadProcesses() {
     loadingProcesses.value = true
+    processesError.value = ''
     try {
         const { data } = await axios.get('/processes')
-        processes.value = data.data ?? data
+        processes.value = data.data ?? data ?? []
     } catch (e) {
-        scanError.value = "Couldn't load the result options. Refresh the page to try again."
+        const status = e.response?.status
+        processesError.value = status
+            ? `Couldn't load result options (server said: ${status}). Tap Retry.`
+            : `Couldn't load result options (${e.message || 'no connection'}). Tap Retry.`
     } finally {
         loadingProcesses.value = false
     }
@@ -220,6 +225,32 @@ async function confirmSelection() {
         saving.value = false
     }
 }
+
+function generateUUID() {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+function getOrCreateTabletId() {
+    let tabletId = localStorage.getItem('tablet_id');
+
+    if (!tabletId) {
+      tabletId = 'TABLET-' + generateUUID();
+      localStorage.setItem('tablet_id', tabletId);
+    }
+
+    return tabletId;
+}
+
+const tabletId = getOrCreateTabletId();
+console.log("Tablet ID:", tabletId);
 </script>
 
 <template>
@@ -291,6 +322,18 @@ async function confirmSelection() {
             <p class="section-sub">Tap the button that matches, then confirm. Each tap records one unit.</p>
 
             <div v-if="loadingProcesses" class="empty-state">Loading result options&hellip;</div>
+
+            <div v-else-if="processesError" class="scan-error">
+                {{ processesError }}
+                <button class="btn btn-ghost btn-block" @click="loadProcesses">Retry</button>
+            </div>
+
+            <div v-else-if="processes.length === 0" class="empty-state">
+                <p><strong>No result options are set up yet.</strong></p>
+                <p>Add rows to the fgchecker_monitoring_process table, then tap Retry.</p>
+                <button class="btn btn-ghost btn-block" @click="loadProcesses">Retry</button>
+            </div>
+
             <div v-else class="result-grid">
                 <button
                     v-for="p in processes"
