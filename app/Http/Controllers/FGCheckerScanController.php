@@ -2,15 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\FgCheckerTableService;
+use App\Services\FGCheckerTableService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 
-class FgCheckerScanController extends Controller
+class FGCheckerScanController extends Controller
 {
-    public function __construct(protected FgCheckerTableService $tables)
+    public function __construct(protected FGCheckerTableService $tables)
     {
     }
 
