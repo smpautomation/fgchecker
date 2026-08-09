@@ -244,9 +244,23 @@ function getOrCreateTabletId() {
     if (!tabletId) {
       tabletId = 'TABLET-' + generateUUID();
       localStorage.setItem('tablet_id', tabletId);
+
     }
 
+    registerTabletID();
+
     return tabletId;
+}
+
+async function registerTabletID(){
+    try {
+        await axios.post('/tabletID', {
+            tabletID: localStorage.getItem('tablet_id')
+        })
+        showToast(`Saved: Tablet ID`)
+    } catch (e) {
+        showToast("Couldn't save tablet ID. Please reload.")
+    }
 }
 
 const tabletId = getOrCreateTabletId();

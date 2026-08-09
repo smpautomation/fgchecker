@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\FGCheckerRecordController;
 use App\Http\Controllers\FGCheckerScanController;
 use Illuminate\Support\Facades\Route;
@@ -24,6 +25,8 @@ Route::get('/admin', function () {
 Route::get('/records', [FGCheckerRecordController::class, 'index'])->name('records');
 
 Route::get('/export', [FGCheckerRecordController::class, 'export'])->name('export');
+
+Route::post('/tabletID', [AdminController::class, 'saveTabletID'])->name('saveTabletID');
 
 Route::get('/processes', [FGCheckerScanController::class, 'processes'])->name('processes');
 
