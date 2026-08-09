@@ -32,12 +32,14 @@ function changeOperator() {
     lot.value = null
     scanError.value = ''
     Object.keys(counts).forEach(k => delete counts[k])
+    history.value = []
 }
 
 function scanNewLot() {
     lot.value = null
     scanError.value = ''
     Object.keys(counts).forEach(k => delete counts[k])
+    history.value = []
     openCamera('lot')
 }
 
@@ -142,14 +144,50 @@ function parseLotQr(text) {
         routingCode: parts[4].trim(),
     }
     scanError.value = ''
-    Object.keys(counts).forEach(k => delete counts[k])
     closeCamera()
+    loadLotHistory()
 }
 
 const processes = ref([])
 const loadingProcesses = ref(true)
 const processesError = ref('')
 const counts = reactive({})
+
+const history = ref([])
+const historyLoading = ref(false)
+const historyError = ref('')
+
+/** Rebuilds the per-button counters from the fetched history so a reload
+ *  (or rescanning the same lot on another tablet) shows accurate totals. */
+function rebuildCountsFromHistory() {
+    Object.keys(counts).forEach(k => delete counts[k])
+    history.value.forEach(r => {
+        counts[r.Result] = (counts[r.Result] || 0) + 1
+    })
+}
+
+async function loadLotHistory() {
+    if (!lot.value) return
+    historyLoading.value = true
+    historyError.value = ''
+    try {
+        const { data } = await axios.get('/lot-history', {
+            params: { model_name: lot.value.modelName, lot_no: lot.value.lotNo },
+        })
+        history.value = data.data ?? data ?? []
+        rebuildCountsFromHistory()
+    } catch (e) {
+        historyError.value = "Couldn't load this lot's history. Counts may be out of date."
+    } finally {
+        historyLoading.value = false
+    }
+}
+
+function formatTimestamp(value) {
+    const d = value ? new Date(value.replace(' ', 'T')) : new Date()
+    const pad = n => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+}
 
 async function loadProcesses() {
     loadingProcesses.value = true
@@ -216,6 +254,13 @@ async function confirmSelection() {
         encoder: operator.value.name,
         result: process.Process,
         })
+        history.value.unshift({
+            Shift_Date_Time: formatTimestamp(),
+            Result: process.Process,
+            Output_Quantity: 1,
+            Encoder: operator.value.name,
+            Type: process.Type,
+        })
         counts[process.Process] = (counts[process.Process] || 0) + 1
         showToast(`Saved: ${process.Process}`, typeClass(process.Type) === 'type-good' ? 'good' : (typeClass(process.Type) === 'type-reload' ? 'reload' : 'notgood'))
         confirm.value = { open: false, process: null }
@@ -244,10 +289,8 @@ function getOrCreateTabletId() {
     if (!tabletId) {
       tabletId = 'TABLET-' + generateUUID();
       localStorage.setItem('tablet_id', tabletId);
-
+      registerTabletID();
     }
-
-    registerTabletID();
 
     return tabletId;
 }
@@ -360,6 +403,28 @@ console.log("Tablet ID:", tabletId);
                     <span class="result-icon" v-html="typeIcon(p.Type)"></span>
                     <span class="result-name">{{ p.Process }}</span>
                 </button>
+            </div>
+        </section>
+
+        <section v-if="operator && lot" class="history">
+            <h2 class="section-title">Scan History</h2>
+            <p class="section-sub">Every result recorded for this lot, most recent first.</p>
+
+            <p v-if="historyError" class="scan-error">{{ historyError }}</p>
+
+            <div class="history-panel">
+                <div v-if="historyLoading && history.length === 0" class="empty-state">Loading history&hellip;</div>
+                <div v-else-if="history.length === 0" class="empty-state">No scans recorded for this lot yet.</div>
+                <ul v-else class="history-list">
+                    <li v-for="(r, i) in history" :key="i" class="history-row">
+                        <span class="history-time mono">{{ formatTimestamp(r.Shift_Date_Time) }}</span>
+                        <span class="history-arrow">&gt;&gt;&gt;</span>
+                        <span class="history-qty mono">{{ r.Output_Quantity || 1 }} pack</span>
+                        <span class="history-dash">-</span>
+                        <span class="history-result" :class="typeClass(r.Type)">{{ r.Result }}</span>
+                        <span class="history-encoder">({{ r.Encoder }})</span>
+                    </li>
+                </ul>
             </div>
         </section>
 
@@ -737,6 +802,44 @@ console.log("Tablet ID:", tabletId);
 }
 .results {
     padding: 24px clamp(16px, 5vw, 56px) 48px;
+}
+.history {
+    padding: 0 clamp(16px, 5vw, 56px) 56px;
+}
+.history-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 8px 18px;
+    max-height: 360px;
+    overflow-y: auto;
+}
+.history-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.history-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.95rem;
+}
+.history-row:last-child { border-bottom: none; }
+.history-time { color: var(--accent); }
+.history-arrow { color: var(--accent); font-weight: 700; }
+.history-qty { color: var(--text); font-weight: 600; }
+.history-dash { color: var(--text-dim); }
+.history-result { font-weight: 700; }
+.history-result.type-good { color: var(--pass); }
+.history-result.type-notgood { color: var(--fail); }
+.history-result.type-reload { color: var(--reload); }
+.history-encoder { color: var(--text-dim); }
+@media (max-width: 480px) {
+    .history-row { font-size: 0.85rem; }
 }
 .section-title {
     font-family: 'Big Shoulders Display', sans-serif;

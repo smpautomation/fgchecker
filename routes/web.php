@@ -30,5 +30,7 @@ Route::post('/tabletID', [AdminController::class, 'saveTabletID'])->name('saveTa
 
 Route::get('/processes', [FGCheckerScanController::class, 'processes'])->name('processes');
 
+Route::get('/lot-history', [FgCheckerScanController::class, 'lotHistory'])->name('lot-history');
+
 Route::post('/scan', [FGCheckerScanController::class, 'store'])->name('scan.store');
 

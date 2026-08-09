@@ -78,4 +78,36 @@ class FGCheckerScanController extends Controller
             ->where('IP_Address', $ip)
             ->value('Area');
     }
+
+    public function lotHistory(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'model_name' => ['required', 'string', 'max:100'],
+            'lot_no'     => ['required', 'string', 'max:100'],
+        ]);
+
+        $table = $this->tables->ensureTableExists();
+
+        $rows = DB::table($table)
+            ->leftJoin(
+                'fgchecker_monitoring_process',
+                "{$table}.Result",
+                '=',
+                'fgchecker_monitoring_process.Process'
+            )
+            ->where("{$table}.Model_Name", $validated['model_name'])
+            ->where("{$table}.Lot_No", $validated['lot_no'])
+            ->select([
+                "{$table}.Shift_Date_Time",
+                "{$table}.Result",
+                "{$table}.Output_Quantity",
+                "{$table}.Encoder",
+                'fgchecker_monitoring_process.Type as Type',
+            ])
+            ->orderByDesc("{$table}.Shift_Date_Time")
+            ->limit(200)
+            ->get();
+
+        return response()->json(['data' => $rows]);
+    }
 }
