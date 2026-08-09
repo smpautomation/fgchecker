@@ -833,10 +833,15 @@ console.log("Tablet ID:", tabletId);
 .history-arrow { color: var(--accent); font-weight: 700; }
 .history-qty { color: var(--text); font-weight: 600; }
 .history-dash { color: var(--text-dim); }
-.history-result { font-weight: 700; }
-.history-result.type-good { color: var(--pass); }
-.history-result.type-notgood { color: var(--fail); }
-.history-result.type-reload { color: var(--reload); }
+.history-result {
+    font-weight: 700;
+    background: none;
+    padding: 0;
+    border-radius: 0;
+}
+.history-result.type-good { color: var(--pass); background: none; }
+.history-result.type-notgood { color: var(--fail); background: none; }
+.history-result.type-reload { color: var(--reload); background: none; }
 .history-encoder { color: var(--text-dim); }
 @media (max-width: 480px) {
     .history-row { font-size: 0.85rem; }
