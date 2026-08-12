@@ -262,8 +262,6 @@ async function printRtv() {
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
-
 :global(html[data-theme='dark']) {
   --bg: #15181b; --bg-2: #1b1f23; --surface: #1e2327; --surface-2: #262b30;
   --text: #eae7df; --text-dim: #949c9f; --border: #33393e;
