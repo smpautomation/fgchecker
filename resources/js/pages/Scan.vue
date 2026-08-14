@@ -157,8 +157,6 @@ const history = ref([])
 const historyLoading = ref(false)
 const historyError = ref('')
 
-/** Rebuilds the per-button counters from the fetched history so a reload
- *  (or rescanning the same lot on another tablet) shows accurate totals. */
 function rebuildCountsFromHistory() {
     Object.keys(counts).forEach(k => delete counts[k])
     history.value.forEach(r => {

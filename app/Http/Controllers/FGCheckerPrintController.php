@@ -20,7 +20,6 @@ class FGCheckerPrintController extends Controller
         return response()->json(['data' => $models]);
     }
 
-    /** GET /validations — powers the Validation Type dropdown */
     public function validationTypes(): JsonResponse
     {
         $types = DB::table('validation_lists')
@@ -30,12 +29,6 @@ class FGCheckerPrintController extends Controller
         return response()->json(['data' => $types]);
     }
 
-    /**
-     * POST /print/validation-sticker
-     * Prints a single validation sticker: QR content "VALIDATION;MODEL;TYPE;1;VALIDATION",
-     * plus human-readable Sample Type / Model Name / Result text, sized by result.
-     * Ports the SBPL sequence from the legacy print_validation_sticker_qr.php exactly.
-     */
     public function printValidationSticker(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -70,8 +63,6 @@ class FGCheckerPrintController extends Controller
         $data .= $esc . 'H' . sprintf('%04d', $offsetH) . $esc . 'V' . sprintf('%04d', $offsetV + 130) . $esc . 'P2' . $esc . 'L0203' . $esc . 'S' . $breakQR[1];
         $data .= $esc . 'H' . sprintf('%04d', $offsetH) . $esc . 'V' . sprintf('%04d', $offsetV + 180) . $esc . 'P2' . $esc . 'L0102' . $esc . 'SValidation Sample Result:';
 
-        // Label size varies by result — GOOD gets the largest font, WRONG ORIENTATION a
-        // medium one, anything else the default. Mirrors the original branching exactly.
         if ($breakQR[2] === 'GOOD') {
             $data .= $esc . 'H' . sprintf('%04d', $offsetH) . $esc . 'V' . sprintf('%04d', $offsetV + 220) . $esc . 'P2' . $esc . 'L0405' . $esc . 'S' . $breakQR[2];
         } elseif ($breakQR[2] === 'WRONG ORIENTATION') {
@@ -97,15 +88,7 @@ class FGCheckerPrintController extends Controller
         return response()->json(['message' => "Sticker sent to printer: {$xQRCode}"]);
     }
 
-    /**
-     * POST /print/rtv (multipart)
-     * Ports the legacy print_rtv_qr.php: reads the first worksheet of the uploaded
-     * file, requires cell A1 to be non-empty, then prints one sticker per data row
-     * starting at row 2. Each row's column A holds a pre-formatted
-     * "BoxId;Model;Field2;Qty;..." string — the whole string (uppercased) becomes the
-     * QR content; BoxId/Model/Qty are also printed as separate readable text.
-     */
-    public function printRtv(Request $request): JsonResponse
+      public function printRtv(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'file'      => ['required', 'file', 'mimes:xls,xlsx'],
@@ -120,7 +103,7 @@ class FGCheckerPrintController extends Controller
         }
 
         $spreadsheet = IOFactory::load($validated['file']->getRealPath());
-        $worksheet = $spreadsheet->getSheetByIndex(0); // only the first sheet, like the legacy script
+        $worksheet = $spreadsheet->getSheetByIndex(0);
         $rows = $worksheet->toArray();
 
         if (! isset($rows[0][0]) || trim((string) $rows[0][0]) === '') {
@@ -129,14 +112,13 @@ class FGCheckerPrintController extends Controller
             ], 422);
         }
 
-        $offsetH = '0380'; // fixed layout constant from the legacy RTV sticker, not tablet-specific
+        $offsetH = '0380';
         $esc = chr(27);
         $printed = 0;
 
         try {
             $socket = $this->openPrinterSocket($tablet->SATO_IP);
 
-            // Data rows start at index 1 (Excel row 2) — row 1 is a header row.
             for ($d = 1; $d < count($rows); $d++) {
                 $cell = (string) ($rows[$d][0] ?? '');
                 if (trim($cell) === '') {
@@ -191,7 +173,6 @@ class FGCheckerPrintController extends Controller
         return TabletRecord::where('tablet_id', $tabletId)->first();
     }
 
-    /** @throws \RuntimeException */
     protected function openPrinterSocket(string $ip)
     {
         $socket = @pfsockopen($ip, 9100, $errno, $errstr, 5);
@@ -201,7 +182,6 @@ class FGCheckerPrintController extends Controller
         return $socket;
     }
 
-    /** @throws \RuntimeException */
     protected function sendToPrinter(string $ip, string $data): void
     {
         $socket = $this->openPrinterSocket($ip);

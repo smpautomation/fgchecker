@@ -41,5 +41,24 @@ Route::get('/models', [FGCheckerPrintController::class, 'models'])->name('fgchec
 //Admin
 Route::get('/admin', function () { return Inertia::render('Admin'); })->name('admin');
 
+Route::get('/admin/access', [AdminController::class, 'checkAccess']);
 
+Route::get('/admin/models', [AdminController::class, 'models']);
+Route::post('/admin/models', [AdminController::class, 'storeModel']);
+Route::put('/admin/models/{no}', [AdminController::class, 'updateModel']);
+Route::delete('/admin/models/{no}', [AdminController::class, 'destroyModel']);
 
+Route::get('/admin/validations', [AdminController::class, 'validations']);
+Route::post('/admin/validations', [AdminController::class, 'storeValidation']);
+Route::put('/admin/validations/{id}', [AdminController::class, 'updateValidation']);
+Route::delete('/admin/validations/{id}', [AdminController::class, 'destroyValidation']);
+
+Route::get('/admin/processes', [AdminController::class, 'processes']);
+Route::post('/admin/processes', [AdminController::class, 'storeProcess']);
+Route::put('/admin/processes/{no}', [AdminController::class, 'updateProcess']);
+Route::delete('/admin/processes/{no}', [AdminController::class, 'destroyProcess']);
+
+Route::get('/admin/tablets', [AdminController::class, 'tablets']);
+Route::post('/admin/tablets', [AdminController::class, 'storeTablet']);
+Route::put('/admin/tablets/{id}', [AdminController::class, 'updateTablet']);
+Route::delete('/admin/tablets/{id}', [AdminController::class, 'destroyTablet']);

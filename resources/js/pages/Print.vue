@@ -1,41 +1,24 @@
 <script setup>
-/**
- * Print.vue — Print Validation Sticker / RTV FG QR Code
- *
- * Two workflows, matching the legacy print_validation_sticker.php and
- * print_rtv.php pages:
- *   1. Validation Sticker — pick a Model + Validation Type, print one sticker.
- *   2. RTV FG Box — upload an Excel file, one sticker per data row.
- *
- * Both resolve the physical SATO printer server-side via TabletRecord.tablet_id
- * (read from localStorage, same ID Scan.vue registers) rather than by network IP,
- * since multiple tablets can share the same IP on this network.
- *
- * Expected backend routes:
- *   GET  /models                    -> { data: ["Model A", ...] }
- *   GET  /validations               -> { data: ["GOOD", "WRONG ORIENTATION", ...] }
- *   POST /print/validation-sticker  -> body { model_name, validation_name, tablet_id }
- *   POST /print/rtv (multipart)     -> body { file, tablet_id }
- */
 import { Head, Link } from '@inertiajs/vue3'
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 
-/* ----------------------------- Theme (same as other pages) ----------------------------- */
 const theme = ref('dark')
+
 function applyTheme(t) {
   document.documentElement.setAttribute('data-theme', t)
   localStorage.setItem('fgchecker-theme', t)
 }
+
 function toggleTheme() {
   theme.value = theme.value === 'dark' ? 'light' : 'dark'
   applyTheme(theme.value)
 }
 
-/* ----------------------------- Tablet ID (same pattern as Scan.vue) ----------------------------- */
 function getTabletId() {
   return localStorage.getItem('tablet_id') || null
 }
+
 const tabletId = ref(getTabletId())
 
 onMounted(() => {
@@ -46,26 +29,25 @@ onMounted(() => {
   loadValidationTypes()
 })
 
-/* ----------------------------- Tabs ----------------------------- */
-const activeTab = ref('sticker') // 'sticker' | 'rtv'
+const activeTab = ref('sticker')
 
-/* ----------------------------- Validation Sticker ----------------------------- */
 const models = ref([])
 const validationTypes = ref([])
 const loadingOptions = ref(true)
 const selectedModel = ref('')
 const selectedValidation = ref('')
 const printingSticker = ref(false)
-const stickerResult = ref(null) // { ok, message }
+const stickerResult = ref(null)
 
 async function loadModels() {
   try {
     const { data } = await axios.get('/models')
     models.value = data.data ?? data ?? []
   } catch (e) {
-    // handled by empty-select fallback below
+
   }
 }
+
 async function loadValidationTypes() {
   loadingOptions.value = true
   try {
@@ -98,11 +80,10 @@ async function printSticker() {
   }
 }
 
-/* ----------------------------- RTV FG Box ----------------------------- */
 const rtvFile = ref(null)
 const rtvFileName = ref('')
 const printingRtv = ref(false)
-const rtvResult = ref(null) // { ok, message }
+const rtvResult = ref(null)
 const fileInputEl = ref(null)
 
 function handleFileChange(e) {
@@ -173,7 +154,6 @@ async function printRtv() {
       This tablet doesn't have an ID yet. Open the Scan page once to register it, then come back here to print.
     </p>
 
-    <!-- ============ TABS ============ -->
     <div class="tabs" role="tablist">
       <button
         role="tab"
@@ -195,7 +175,6 @@ async function printRtv() {
       </button>
     </div>
 
-    <!-- ============ VALIDATION STICKER ============ -->
     <section v-if="activeTab === 'sticker'" class="panel-section">
       <div class="panel">
         <h2 class="section-title">Print a Validation Sticker</h2>
@@ -233,7 +212,6 @@ async function printRtv() {
       </div>
     </section>
 
-    <!-- ============ RTV FG BOX ============ -->
     <section v-if="activeTab === 'rtv'" class="panel-section">
       <div class="panel">
         <h2 class="section-title">Print RTV FG Box Labels</h2>
@@ -290,7 +268,6 @@ async function printRtv() {
   font-family: 'IBM Plex Sans', sans-serif;
 }
 
-/* ===================== Header (shared pattern) ===================== */
 .topbar { display: flex; align-items: center; flex-wrap: wrap; row-gap: 12px; gap: 24px; padding: 16px clamp(16px, 5vw, 56px); border-bottom: 1px solid var(--border); background: var(--bg-2); }
 .plate { display: flex; align-items: center; gap: 10px; font-family: 'Big Shoulders Display', sans-serif; font-weight: 800; font-size: 1.5rem; letter-spacing: 0.06em; }
 .plate-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
@@ -301,11 +278,10 @@ async function printRtv() {
 .switch { margin-left: auto; display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 6px 10px; border-radius: 999px; background: none; border: none; cursor: pointer; color: var(--text); font-weight: 500; }
 .switch:hover { background: var(--surface-2); }
 .switch-track { width: 46px; height: 26px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); position: relative; }
-.switch-knob { position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); transition: transform .2s ease; }
+.switch-knob { position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: var(--a  ccent); transition: transform .2s ease; }
 :global(html[data-theme='light']) .switch-knob { transform: translateX(20px); }
 .nav-link:focus-visible, .btn:focus-visible, .switch:focus-visible, .tab-btn:focus-visible, select:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 
-/* ===================== Hero ===================== */
 .print-hero { position: relative; padding: 36px clamp(16px, 5vw, 56px) 8px; overflow: hidden; }
 .hazard-strip { position: absolute; top: 0; left: 0; right: 0; height: 6px; background: repeating-linear-gradient(135deg, var(--accent) 0 18px, var(--bg-2) 18px 36px); opacity: 0.9; }
 .eyebrow { text-transform: uppercase; letter-spacing: 0.14em; font-size: 0.8rem; color: var(--accent); font-weight: 600; margin: 0 0 10px; }
@@ -322,7 +298,6 @@ async function printRtv() {
   font-weight: 500;
 }
 
-/* ===================== Tabs ===================== */
 .tabs {
   display: flex;
   gap: 8px;
@@ -343,7 +318,6 @@ async function printRtv() {
 .tab-btn.active { background: var(--surface); color: var(--text); }
 .tab-btn:not(.active):hover { color: var(--text); }
 
-/* ===================== Panel ===================== */
 .panel-section { padding: 0 clamp(16px, 5vw, 56px) 56px; }
 .panel {
   background: var(--surface);
@@ -382,7 +356,6 @@ async function printRtv() {
 .result-ok { background: color-mix(in srgb, var(--pass) 18%, var(--surface)); border: 1px solid var(--pass); color: var(--text); }
 .result-error { background: color-mix(in srgb, var(--fail) 15%, var(--surface)); border: 1px solid var(--fail); color: var(--text); }
 
-/* ===================== File drop ===================== */
 .file-drop {
   display: flex;
   align-items: center;
