@@ -21,7 +21,52 @@ onMounted(() => {
     theme.value = saved || 'dark'
     applyTheme(theme.value)
     loadProcesses()
+    connectR4Stream()
 })
+
+/* ----------------------------- R4 sensor light gate -----------------------------
+ * Live gate on the result buttons, driven by r4_temp.light for this tablet's
+ * registered r4_name. GREEN -> only GOOD/RELOAD selectable. RED -> only
+ * NOT GOOD/RELOAD selectable. ORANGE -> standby, ignored entirely.
+ * Resets to unrestricted after each submitted result and on a new lot scan,
+ * so every unit gets a fresh sensor reading before its buttons unlock.
+ */
+const lightGate = ref(null) // 'GREEN' | 'RED' | null
+let r4Source = null
+
+function connectR4Stream() {
+    if (!tabletId || typeof EventSource === 'undefined') return
+    r4Source = new EventSource(`/r4-status-stream?tablet_id=${encodeURIComponent(tabletId)}`)
+    r4Source.onmessage = (e) => {
+        try {
+            const payload = JSON.parse(e.data)
+            if (payload.error) return
+            const light = String(payload.light || '').toUpperCase()
+            if (light === 'GREEN') lightGate.value = 'GREEN'
+            else if (light === 'RED') lightGate.value = 'RED'
+            // ORANGE: standby, do nothing — leaves the current gate as-is.
+        } catch (err) {
+            // ignore malformed payloads; the stream will keep sending
+        }
+    }
+    // No custom onerror handling needed — EventSource reconnects natively
+    // and resumes via Last-Event-ID, which the server honors.
+}
+
+function disconnectR4Stream() {
+    if (r4Source) {
+        r4Source.close()
+        r4Source = null
+    }
+}
+
+function isProcessAllowed(p) {
+    if (!lightGate.value) return true
+    const type = String(p.Type ?? '').trim().toUpperCase()
+    if (lightGate.value === 'GREEN') return type === 'GOOD' || type === 'RELOAD'
+    if (lightGate.value === 'RED') return type === 'NOT GOOD' || type === 'RELOAD'
+    return true
+}
 
 const operator = ref(null)
 const lot = ref(null)
@@ -31,6 +76,7 @@ function changeOperator() {
     operator.value = null
     lot.value = null
     scanError.value = ''
+    lightGate.value = null
     Object.keys(counts).forEach(k => delete counts[k])
     history.value = []
 }
@@ -38,6 +84,7 @@ function changeOperator() {
 function scanNewLot() {
     lot.value = null
     scanError.value = ''
+    lightGate.value = null
     Object.keys(counts).forEach(k => delete counts[k])
     history.value = []
     openCamera('lot')
@@ -109,7 +156,10 @@ function closeCamera() {
     }
 }
 
-onBeforeUnmount(closeCamera)
+onBeforeUnmount(() => {
+    closeCamera()
+    disconnectR4Stream()
+})
 
 function handleDecode(text) {
     if (cameraTarget.value === 'operator') {
@@ -157,6 +207,8 @@ const history = ref([])
 const historyLoading = ref(false)
 const historyError = ref('')
 
+/** Rebuilds the per-button counters from the fetched history so a reload
+ *  (or rescanning the same lot on another tablet) shows accurate totals. */
 function rebuildCountsFromHistory() {
     Object.keys(counts).forEach(k => delete counts[k])
     history.value.forEach(r => {
@@ -260,6 +312,7 @@ async function confirmSelection() {
             Type: process.Type,
         })
         counts[process.Process] = (counts[process.Process] || 0) + 1
+        lightGate.value = null
         showToast(`Saved: ${process.Process}`, typeClass(process.Type) === 'type-good' ? 'good' : (typeClass(process.Type) === 'type-reload' ? 'reload' : 'notgood'))
         confirm.value = { open: false, process: null }
     } catch (e) {
@@ -287,21 +340,9 @@ function getOrCreateTabletId() {
     if (!tabletId) {
       tabletId = 'TABLET-' + generateUUID();
       localStorage.setItem('tablet_id', tabletId);
-      registerTabletID();
     }
 
     return tabletId;
-}
-
-async function registerTabletID(){
-    try {
-        await axios.post('/tabletID', {
-            tabletID: localStorage.getItem('tablet_id')
-        })
-        showToast(`Saved: Tablet ID`)
-    } catch (e) {
-        showToast("Couldn't save tablet ID. Please reload.")
-    }
 }
 
 const tabletId = getOrCreateTabletId();
@@ -376,6 +417,13 @@ console.log("Tablet ID:", tabletId);
             <h2 class="section-title">Select Result</h2>
             <p class="section-sub">Tap the button that matches, then confirm. Each tap records one unit.</p>
 
+            <div class="sensor-indicator" :class="'sensor-' + (lightGate ? lightGate.toLowerCase() : 'idle')">
+                <span class="sensor-dot"></span>
+                <span v-if="lightGate === 'GREEN'">Sensor: Green &mdash; Good or Reload only</span>
+                <span v-else-if="lightGate === 'RED'">Sensor: Red &mdash; Not Good or Reload only</span>
+                <span v-else>Waiting for sensor reading&hellip;</span>
+            </div>
+
             <div v-if="loadingProcesses" class="empty-state">Loading result options&hellip;</div>
 
             <div v-else-if="processesError" class="scan-error">
@@ -394,7 +442,8 @@ console.log("Tablet ID:", tabletId);
                     v-for="p in processes"
                     :key="p.Process"
                     class="result-btn"
-                    :class="typeClass(p.Type)"
+                    :class="[typeClass(p.Type), { 'is-locked': !isProcessAllowed(p) }]"
+                    :disabled="!isProcessAllowed(p)"
                     @click="selectProcess(p)"
                     >
                     <span class="result-count">{{ counts[p.Process] || 0 }}</span>
@@ -883,6 +932,31 @@ console.log("Tablet ID:", tabletId);
     transition: transform .1s ease, box-shadow .15s ease;
 }
 .result-btn:active { transform: scale(0.97); }
+.result-btn.is-locked { opacity: 0.35; cursor: not-allowed; transform: none !important; }
+.result-btn.is-locked:hover { box-shadow: none; }
+
+.sensor-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 18px;
+}
+.sensor-dot {
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--border);
+    box-shadow: 0 0 0 3px transparent;
+    transition: background-color .2s ease, box-shadow .2s ease;
+}
+.sensor-indicator.sensor-green .sensor-dot { background: var(--pass); box-shadow: 0 0 0 3px color-mix(in srgb, var(--pass) 30%, transparent); }
+.sensor-indicator.sensor-red .sensor-dot { background: var(--fail); box-shadow: 0 0 0 3px color-mix(in srgb, var(--fail) 30%, transparent); }
+.sensor-indicator.sensor-green, .sensor-indicator.sensor-red { color: var(--text); }
 .result-icon svg { width: 26px; height: 26px; }
 .result-count {
   position: absolute;

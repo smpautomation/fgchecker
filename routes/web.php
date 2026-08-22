@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\FGCheckerPrintController;
+use App\Http\Controllers\FGCheckerR4Controller;
 use App\Http\Controllers\FGCheckerRecordController;
 use App\Http\Controllers\FGCheckerScanController;
 use Illuminate\Support\Facades\Route;
@@ -62,3 +63,6 @@ Route::get('/admin/tablets', [AdminController::class, 'tablets']);
 Route::post('/admin/tablets', [AdminController::class, 'storeTablet']);
 Route::put('/admin/tablets/{id}', [AdminController::class, 'updateTablet']);
 Route::delete('/admin/tablets/{id}', [AdminController::class, 'destroyTablet']);
+
+//Arduino R4
+Route::get('/r4-status-stream', [FGCheckerR4Controller::class, 'stream']);
