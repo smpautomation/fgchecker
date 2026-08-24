@@ -79,7 +79,7 @@ const resourceDefs = reactive({
     title: 'Tablets',
     hint: 'Registered devices, their printer, and access role.',
     endpoint: '/admin/tablets',
-    idField: 'id',
+    idField: 'tablet_id',
     columns: [
       { key: 'tablet_id', label: 'Tablet ID' },
       { key: 'Area', label: 'Area' },

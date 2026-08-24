@@ -10,14 +10,14 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class FGCheckerR4Controller extends Controller
 {
     /** Poll interval, in seconds. */
-    protected const POLL_SECONDS = 1;
+    protected const POLL_SECONDS = 2;
 
     /**
      * How many poll iterations before the stream closes on its own and lets
      * the browser's native EventSource reconnect. Keeps a single PHP-FPM
      * worker from being tied up indefinitely per connected tablet.
      */
-    protected const MAX_ITERATIONS = 600; // ~10 minutes at 1s polls
+    protected const MAX_ITERATIONS = 300; // ~5 minutes at 1s polls
 
     /**
      * GET /r4-status-stream?tablet_id=...
