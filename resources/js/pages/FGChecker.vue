@@ -99,6 +99,16 @@ function resultBadgeClass(record) {
     return 'badge-notgood'
 }
 
+const toast = ref(null)
+let toastTimer = null
+
+function showToast(message, type = 'good') {
+    toast.value = { message, type }
+    clearTimeout(toastTimer)
+    toastTimer = setTimeout(() => { toast.value = null }, 2600)
+}
+
+
 function generateUUID() {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
         return crypto.randomUUID();
