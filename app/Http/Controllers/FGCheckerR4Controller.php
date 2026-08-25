@@ -10,7 +10,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class FGCheckerR4Controller extends Controller
 {
     /** Poll interval, in seconds. */
-    protected const POLL_SECONDS = 2;
+    protected const POLL_SECONDS = 1;
 
     /**
      * How many poll iterations before the stream closes on its own and lets
@@ -18,6 +18,18 @@ class FGCheckerR4Controller extends Controller
      * worker from being tied up indefinitely per connected tablet.
      */
     protected const MAX_ITERATIONS = 300; // ~5 minutes at 1s polls
+
+    /**
+     * Send a heartbeat comment this often (in poll iterations) even when no
+     * new row arrives. Two reasons this matters:
+     *   1. connection_aborted() is only updated by PHP when it attempts an
+     *      output write — without periodic output, a disconnected client
+     *      goes unnoticed until the loop's natural end (up to ~5 minutes).
+     *   2. Reverse proxies (nginx's default proxy_read_timeout /
+     *      fastcgi_read_timeout, often 60s) will silently kill a connection
+     *      that's been silent that long.
+     */
+    protected const HEARTBEAT_EVERY = 15;
 
     /**
      * GET /r4-status-stream?tablet_id=...
@@ -42,6 +54,10 @@ class FGCheckerR4Controller extends Controller
                 ob_end_flush();
             }
 
+            // Defensive: sleep() doesn't count against max_execution_time on
+            // standard PHP-FPM, but this guards environments where it does.
+            set_time_limit(0);
+
             if (! $r4Name) {
                 $this->emit(0, ['error' => 'This tablet is not linked to an r4_name. Contact PIC.']);
                 return;
@@ -60,12 +76,21 @@ class FGCheckerR4Controller extends Controller
                     ->orderBy('id')
                     ->get();
 
-                foreach ($rows as $row) {
-                    $this->emit($row->id, [
-                        'light'    => strtoupper((string) $row->light),
-                        'datetime' => $row->DateTime,
-                    ]);
-                    $currentId = $row->id;
+                if ($rows->isEmpty()) {
+                    // No new data — still write *something* periodically so a
+                    // dropped client is detected promptly and proxies don't
+                    // time out the idle connection.
+                    if ($i % self::HEARTBEAT_EVERY === 0) {
+                        $this->heartbeat();
+                    }
+                } else {
+                    foreach ($rows as $row) {
+                        $this->emit($row->id, [
+                            'light'    => strtoupper((string) $row->light),
+                            'datetime' => $row->DateTime,
+                        ]);
+                        $currentId = $row->id;
+                    }
                 }
 
                 sleep(self::POLL_SECONDS);
@@ -97,6 +122,16 @@ class FGCheckerR4Controller extends Controller
     {
         echo "id: {$id}\n";
         echo 'data: ' . json_encode($data) . "\n\n";
+        flush();
+    }
+
+    /**
+     * SSE comment line (starts with ":") — valid per spec, ignored by
+     * EventSource's onmessage, but still a real write PHP/proxies see.
+     */
+    protected function heartbeat(): void
+    {
+        echo ": heartbeat\n\n";
         flush();
     }
 }
