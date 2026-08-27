@@ -9,4 +9,6 @@ class TabletRecord extends Model
     protected $table = "ipaddress";
     public $timestamps = false;
     protected $guarded = [];
+    protected $primaryKey = 'tablet_id';
+    protected $keyType = 'string';
 }

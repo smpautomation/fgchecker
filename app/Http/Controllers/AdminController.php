@@ -126,7 +126,7 @@ class AdminController extends Controller
 
     public function tablets(): JsonResponse
     {
-        return response()->json(['data' => TabletRecord::orderBy('Area')->get()]);
+        return response()->json(['data' => TabletRecord::orderBy('role')->get()]);
     }
 
     public function storeTablet(Request $request): JsonResponse
@@ -136,10 +136,10 @@ class AdminController extends Controller
         return response()->json(['data' => $tablet], 201);
     }
 
-    public function updateTablet(Request $request, int $id): JsonResponse
+    public function updateTablet(Request $request, $id): JsonResponse
     {
-        $tablet = TabletRecord::findOrFail($id);
-        $validated = $this->validateTablet($request, $tablet->id);
+        $tablet = TabletRecord::where('tablet_id', $id)->firstOrFail();
+        $validated = $this->validateTablet($request, $tablet->tablet_id);
         $tablet->update($validated);
         return response()->json(['data' => $tablet->fresh()]);
     }
@@ -150,12 +150,10 @@ class AdminController extends Controller
         return response()->json(['message' => 'Tablet record deleted.']);
     }
 
-    protected function validateTablet(Request $request, ?int $ignoreId = null): array
+    protected function validateTablet(Request $request, $ignoreId = null): array
     {
-        $uniqueRule = 'unique:tablet_records,tablet_id' . ($ignoreId ? ",{$ignoreId},id" : '');
-
         return $request->validate([
-            'tablet_id'         => ['required', 'string', 'max:100', $uniqueRule],
+            'tablet_id'         => ['required', 'string', 'max:100'],
             'IP_Address'        => ['nullable', 'string', 'max:45'],
             'Area'              => ['nullable', 'string', 'max:100'],
             'SATO_IP'           => ['nullable', 'string', 'max:45'],

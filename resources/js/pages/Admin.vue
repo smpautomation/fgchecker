@@ -83,7 +83,7 @@ const resourceDefs = reactive({
     columns: [
       { key: 'tablet_id', label: 'Tablet ID' },
       { key: 'Area', label: 'Area' },
-      { key: 'SATO_IP', label: 'SATO IP' },
+      { key: 'r4_Name', label: 'R4 Name' },
       { key: 'role', label: 'Role' },
     ],
     fields: [
