@@ -17,7 +17,7 @@ class FGCheckerR4Controller extends Controller
      * the browser's native EventSource reconnect. Keeps a single PHP-FPM
      * worker from being tied up indefinitely per connected tablet.
      */
-    protected const MAX_ITERATIONS = 300; // ~5 minutes at 1s polls
+    protected const MAX_ITERATIONS = 5; // ~5 minutes at 1s polls
 
     /**
      * Send a heartbeat comment this often (in poll iterations) even when no
